@@ -77,6 +77,26 @@
         const costcoMarkers = [];
         const samsMarkers = [];
 
+        const costcoLayer = L.layerGroup().addTo(map);
+        const samsLayer = L.layerGroup().addTo(map);
+
+        let allMarkersLoaded = false;
+
+        function toggleAllPopups() {
+            const show = document.getElementById('togglePopups').checked;
+            if (!allMarkersLoaded) {
+                setTimeout(toggleAllPopups, 500);
+                return;
+            }
+            [...costcoMarkers, ...samsMarkers].forEach(marker => {
+                if (show) {
+                    marker.openPopup();
+                } else {
+                    marker.closePopup();
+                }
+            });
+        }
+
         Papa.parse('costcos.csv', {
             download: true,
             header: true,
@@ -89,12 +109,12 @@
 
                     const marker = L.marker([lat, lng], {
                         icon: status === "active" ? redIcon : yellowIcon
-                    }).addTo(map);
+                    }).bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
 
-                    marker.bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
-                    marker._popupContent = marker.getPopup().getContent();
+                    marker.addTo(costcoLayer);
                     costcoMarkers.push(marker);
                 });
+                allMarkersLoaded = true;
             }
         });
 
@@ -110,12 +130,12 @@
 
                     const marker = L.marker([lat, lng], {
                         icon: status === "active" ? blueIcon : lightBlueIcon
-                    }).addTo(map);
+                    }).bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
 
-                    marker.bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
-                    marker._popupContent = marker.getPopup().getContent();
+                    marker.addTo(samsLayer);
                     samsMarkers.push(marker);
                 });
+                allMarkersLoaded = true;
             }
         });
 
@@ -156,10 +176,11 @@
                     <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/yellow-dot.png"> Inactive Costco</div>
                     <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png"> Active Sam's Club</div>
                     <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png"> Inactive Sam's Club</div>
-                    <label style="margin-top:8px;">
-                        <input type="checkbox" id="togglePopups" onchange="toggleAllPopups()" />
-                        Show All Info
-                    </label>
+                </div>
+                <div class="legend-column">
+                    <label><input type="checkbox" id="togglePopups" onchange="toggleAllPopups()"> Show All Info</label>
+                    <label><input type="checkbox" id="toggleCostcos" checked onchange="toggleCostcoLayer()"> Show Costcos</label>
+                    <label><input type="checkbox" id="toggleSams" checked onchange="toggleSamsLayer()"> Show Sam's Club</label>
                 </div>
             `;
             return div;
@@ -167,10 +188,14 @@
 
         legend.addTo(map);
 
-        function toggleAllPopups() {
-            const show = document.getElementById('togglePopups').checked;
-            costcoMarkers.forEach(marker => show ? marker.openPopup() : marker.closePopup());
-            samsMarkers.forEach(marker => show ? marker.openPopup() : marker.closePopup());
+        function toggleCostcoLayer() {
+            const show = document.getElementById('toggleCostcos').checked;
+            show ? costcoLayer.addTo(map) : costcoLayer.remove();
+        }
+
+        function toggleSamsLayer() {
+            const show = document.getElementById('toggleSams').checked;
+            show ? samsLayer.addTo(map) : samsLayer.remove();
         }
     </script>
 </body>

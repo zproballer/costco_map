@@ -21,18 +21,29 @@
             maxZoom: 18,
         }).addTo(map);
 
-        // Load and display Costco locations
-        Papa.parse('costcos.csv', {
-            download: true,
-            header: true,
-            complete: function(results) {
-                results.data.forEach(row => {
-                    if (!row.lat || !row.lng) return;
-                    const marker = L.marker([parseFloat(row.lat), parseFloat(row.lng)]).addTo(map);
-                    marker.bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
-                });
-            }
+// Load and display Costco locations
+Papa.parse('costcos.csv', {
+    download: true,
+    header: true,
+    complete: function(results) {
+        results.data.forEach(row => {
+            if (!row.lat || !row.lng) return;
+            const lat = parseFloat(row.lat);
+            const lng = parseFloat(row.lng);
+            const status = row.status ? row.status.trim().toLowerCase() : "inactive";
+
+            // Choose marker color based on status
+            const markerIcon = L.circleMarker([lat, lng], {
+                radius: 8,
+                color: status === "active" ? "red" : "orange",
+                fillColor: status === "active" ? "red" : "yellow",
+                fillOpacity: 0.8
+            }).addTo(map);
+
+            markerIcon.bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
         });
+    }
+});
 
         // Load and display Rep locations with radius circles
         fetch('reps.csv')

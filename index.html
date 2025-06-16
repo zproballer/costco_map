@@ -33,6 +33,10 @@
             vertical-align: middle;
             margin-right: 5px;
         }
+        .tooltip-address {
+            font-size: 11px;
+            color: #444;
+        }
     </style>
 </head>
 <body>
@@ -81,7 +85,7 @@
         const samsLayer = L.layerGroup().addTo(map);
 
         function createTooltipContent(row) {
-            return `<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`;
+            return `<b>(#${row.store_number}) ${row.name}</b><br><span class='tooltip-address'>${row.address}</span>`;
         }
 
         Papa.parse('costcos.csv', {
@@ -95,8 +99,9 @@
                     const status = row.status ? row.status.trim().toLowerCase() : "inactive";
                     const icon = status === "active" ? redIcon : yellowIcon;
 
-                    const marker = L.marker([lat, lng], { icon }).bindPopup(createTooltipContent(row));
-                    marker.bindTooltip(createTooltipContent(row), { permanent: false, direction: "top" });
+                    const tooltipHTML = createTooltipContent(row);
+                    const marker = L.marker([lat, lng], { icon }).bindPopup(tooltipHTML);
+                    marker.bindTooltip(tooltipHTML, { permanent: false, direction: "top", offset: [0, -20] });
                     marker.addTo(costcoLayer);
                     costcoMarkers.push(marker);
                 });
@@ -114,8 +119,9 @@
                     const status = row.status ? row.status.trim().toLowerCase() : "inactive";
                     const icon = status === "active" ? blueIcon : lightBlueIcon;
 
-                    const marker = L.marker([lat, lng], { icon }).bindPopup(createTooltipContent(row));
-                    marker.bindTooltip(createTooltipContent(row), { permanent: false, direction: "top" });
+                    const tooltipHTML = createTooltipContent(row);
+                    const marker = L.marker([lat, lng], { icon }).bindPopup(tooltipHTML);
+                    marker.bindTooltip(tooltipHTML, { permanent: false, direction: "top", offset: [0, -20] });
                     marker.addTo(samsLayer);
                     samsMarkers.push(marker);
                 });
@@ -173,15 +179,12 @@
 
         function toggleTooltips() {
             const show = document.getElementById('toggleTooltip').checked;
-            costcoMarkers.forEach(marker => marker.getTooltip().options.permanent = show);
-            samsMarkers.forEach(marker => marker.getTooltip().options.permanent = show);
-            map.eachLayer(layer => {
-                if (layer.getTooltip && layer.getTooltip()) {
-                    if (show) {
-                        layer.openTooltip();
-                    } else {
-                        layer.closeTooltip();
-                    }
+            [...costcoMarkers, ...samsMarkers].forEach(marker => {
+                marker.getTooltip().options.permanent = show;
+                if (show) {
+                    marker.openTooltip();
+                } else {
+                    marker.closeTooltip();
                 }
             });
         }

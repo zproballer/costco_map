@@ -80,21 +80,8 @@
         const costcoLayer = L.layerGroup().addTo(map);
         const samsLayer = L.layerGroup().addTo(map);
 
-        let allMarkersLoaded = false;
-
-        function toggleAllPopups() {
-            const show = document.getElementById('togglePopups').checked;
-            if (!allMarkersLoaded) {
-                setTimeout(toggleAllPopups, 500);
-                return;
-            }
-            [...costcoMarkers, ...samsMarkers].forEach(marker => {
-                if (show) {
-                    marker.openPopup();
-                } else {
-                    marker.closePopup();
-                }
-            });
+        function createTooltipContent(row) {
+            return `<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`;
         }
 
         Papa.parse('costcos.csv', {
@@ -106,15 +93,13 @@
                     const lat = parseFloat(row.lat);
                     const lng = parseFloat(row.lng);
                     const status = row.status ? row.status.trim().toLowerCase() : "inactive";
+                    const icon = status === "active" ? redIcon : yellowIcon;
 
-                    const marker = L.marker([lat, lng], {
-                        icon: status === "active" ? redIcon : yellowIcon
-                    }).bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
-
+                    const marker = L.marker([lat, lng], { icon }).bindPopup(createTooltipContent(row));
+                    marker.bindTooltip(createTooltipContent(row), { permanent: false, direction: "top" });
                     marker.addTo(costcoLayer);
                     costcoMarkers.push(marker);
                 });
-                allMarkersLoaded = true;
             }
         });
 
@@ -127,15 +112,13 @@
                     const lat = parseFloat(row.lat);
                     const lng = parseFloat(row.lng);
                     const status = row.status ? row.status.trim().toLowerCase() : "inactive";
+                    const icon = status === "active" ? blueIcon : lightBlueIcon;
 
-                    const marker = L.marker([lat, lng], {
-                        icon: status === "active" ? blueIcon : lightBlueIcon
-                    }).bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
-
+                    const marker = L.marker([lat, lng], { icon }).bindPopup(createTooltipContent(row));
+                    marker.bindTooltip(createTooltipContent(row), { permanent: false, direction: "top" });
                     marker.addTo(samsLayer);
                     samsMarkers.push(marker);
                 });
-                allMarkersLoaded = true;
             }
         });
 
@@ -178,7 +161,7 @@
                     <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png"> Inactive Sam's Club</div>
                 </div>
                 <div class="legend-column">
-                    <label><input type="checkbox" id="togglePopups" onchange="toggleAllPopups()"> Show All Info</label>
+                    <label><input type="checkbox" id="toggleTooltip" onchange="toggleTooltips()"> Show All Info</label>
                     <label><input type="checkbox" id="toggleCostcos" checked onchange="toggleCostcoLayer()"> Show Costcos</label>
                     <label><input type="checkbox" id="toggleSams" checked onchange="toggleSamsLayer()"> Show Sam's Club</label>
                 </div>
@@ -187,6 +170,21 @@
         };
 
         legend.addTo(map);
+
+        function toggleTooltips() {
+            const show = document.getElementById('toggleTooltip').checked;
+            costcoMarkers.forEach(marker => marker.getTooltip().options.permanent = show);
+            samsMarkers.forEach(marker => marker.getTooltip().options.permanent = show);
+            map.eachLayer(layer => {
+                if (layer.getTooltip && layer.getTooltip()) {
+                    if (show) {
+                        layer.openTooltip();
+                    } else {
+                        layer.closeTooltip();
+                    }
+                }
+            });
+        }
 
         function toggleCostcoLayer() {
             const show = document.getElementById('toggleCostcos').checked;

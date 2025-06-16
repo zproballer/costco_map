@@ -98,6 +98,8 @@
 
         const costcoMarkers = [];
         const samsMarkers = [];
+        const activeMarkers = [];
+        const inactiveMarkers = [];
 
         const costcoLayer = L.layerGroup().addTo(map);
         const samsLayer = L.layerGroup().addTo(map);
@@ -116,14 +118,16 @@
                     <span class='tooltip-address'>${addressParts.line3}</span>`;
         }
 
-        function createMarker(row, icon, collection, layer) {
+        function createMarker(row, icon, masterList, layer, isActive) {
             const lat = parseFloat(row.lat);
             const lng = parseFloat(row.lng);
             const tooltipHTML = createTooltipContent(row);
 
             const marker = L.marker([lat, lng], { icon }).bindPopup(tooltipHTML);
-            marker.tooltipHTML = tooltipHTML; // store content
-            collection.push(marker);
+            marker.tooltipHTML = tooltipHTML;
+            marker.isActive = isActive;
+            masterList.push(marker);
+            (isActive ? activeMarkers : inactiveMarkers).push(marker);
             marker.addTo(layer);
         }
 
@@ -135,7 +139,7 @@
                     if (!row.lat || !row.lng) return;
                     const status = row.status ? row.status.trim().toLowerCase() : "inactive";
                     const icon = status === "active" ? redIcon : yellowIcon;
-                    createMarker(row, icon, costcoMarkers, costcoLayer);
+                    createMarker(row, icon, costcoMarkers, costcoLayer, status === "active");
                 });
             }
         });
@@ -148,85 +152,38 @@
                     if (!row.lat || !row.lng) return;
                     const status = row.status ? row.status.trim().toLowerCase() : "inactive";
                     const icon = status === "active" ? blueIcon : lightBlueIcon;
-                    createMarker(row, icon, samsMarkers, samsLayer);
+                    createMarker(row, icon, samsMarkers, samsLayer, status === "active");
                 });
             }
         });
 
-        fetch('reps.csv')
-            .then(response => response.ok ? response.text() : Promise.reject('No reps file found'))
-            .then(csv => {
-                Papa.parse(csv, {
-                    header: true,
-                    complete: function(results) {
-                        results.data.forEach(row => {
-                            if (!row.lat || !row.lng) return;
-                            const lat = parseFloat(row.lat);
-                            const lng = parseFloat(row.lng);
-                            const marker = L.circleMarker([lat, lng], { color: 'blue' }).addTo(map);
-                            marker.bindPopup(`<b>${row.name}</b><br>${row.address}`);
-                            L.circle([lat, lng], {
-                                color: 'blue',
-                                fillColor: '#blue',
-                                fillOpacity: 0.1,
-                                radius: 80467
-                            }).addTo(map);
-                        });
-                    }
-                });
-            })
-            .catch(() => {
-                console.log("No reps.csv found. Map will display only Costco and Sam's Club locations.");
-            });
-
-        const legend = L.control({ position: 'bottomright' });
-
-        legend.onAdd = function (map) {
-            const div = L.DomUtil.create('div', 'leaflet-control legend');
-            div.id = "legendBox";
-            div.innerHTML = `
-                <div class="legend-title">Legend</div>
-                <div class="legend-column">
-                    <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/red-dot.png"> Active Costco</div>
-                    <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/yellow-dot.png"> Inactive Costco</div>
-                    <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png"> Active Sam's Club</div>
-                    <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png"> Inactive Sam's Club</div>
-                </div>
-                <div class="legend-column">
-                    <label><input type="checkbox" id="toggleTooltip" onchange="toggleTooltips()"> Show All Info</label>
-                    <label><input type="checkbox" id="toggleCostcos" checked onchange="toggleCostcoLayer()"> Show Costcos</label>
-                    <label><input type="checkbox" id="toggleSams" checked onchange="toggleSamsLayer()"> Show Sam's Club</label>
-                </div>
-            `;
-            return div;
-        };
-
-        legend.addTo(map);
+        function toggleTooltipDisplay(marker, show) {
+            if (marker.getTooltip()) marker.unbindTooltip();
+            if (show) {
+                marker.bindTooltip(marker.tooltipHTML, {
+                    permanent: true,
+                    direction: "top",
+                    offset: [0, -20],
+                    interactive: false
+                }).openTooltip();
+            }
+        }
 
         function toggleTooltips() {
             const show = document.getElementById('toggleTooltip').checked;
-            const allMarkers = [...costcoMarkers, ...samsMarkers];
-            allMarkers.forEach(marker => {
-                if (marker.getTooltip()) marker.unbindTooltip();
-                if (show) {
-                    marker.bindTooltip(marker.tooltipHTML, {
-                        permanent: true,
-                        direction: "top",
-                        offset: [0, -20],
-                        interactive: false
-                    }).openTooltip();
-                }
+            [...costcoMarkers, ...samsMarkers].forEach(marker => {
+                toggleTooltipDisplay(marker, show);
             });
         }
 
-        function toggleCostcoLayer() {
-            const show = document.getElementById('toggleCostcos').checked;
-            show ? costcoLayer.addTo(map) : costcoLayer.remove();
-        }
-
-        function toggleSamsLayer() {
-            const show = document.getElementById('toggleSams').checked;
-            show ? samsLayer.addTo(map) : samsLayer.remove();
+        function toggleLayerVisibility(markers, visible) {
+            markers.forEach(marker => {
+                if (visible) {
+                    marker.addTo(map);
+                } else {
+                    map.removeLayer(marker);
+                }
+            });
         }
 
         function toggleLegend() {
@@ -240,6 +197,30 @@
                 toggleBtn.innerText = "Show Legend";
             }
         }
+
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'leaflet-control legend');
+            div.id = "legendBox";
+            div.innerHTML = `
+                <div class="legend-title">Legend</div>
+                <div class="legend-column">
+                    <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/red-dot.png"> Active Costco</div>
+                    <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/yellow-dot.png"> Inactive Costco</div>
+                    <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png"> Active Sam's Club</div>
+                    <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png"> Inactive Sam's Club</div>
+                </div>
+                <div class="legend-column">
+                    <label><input type="checkbox" id="toggleTooltip" onchange="toggleTooltips()"> Show All Info</label>
+                    <label><input type="checkbox" id="toggleCostcos" checked onchange="toggleLayerVisibility(costcoMarkers, this.checked)"> Show Costcos</label>
+                    <label><input type="checkbox" id="toggleSams" checked onchange="toggleLayerVisibility(samsMarkers, this.checked)"> Show Sam's Club</label>
+                    <label><input type="checkbox" id="toggleActive" checked onchange="toggleLayerVisibility(activeMarkers, this.checked)"> Show Active</label>
+                    <label><input type="checkbox" id="toggleInactive" checked onchange="toggleLayerVisibility(inactiveMarkers, this.checked)"> Show Inactive</label>
+                </div>
+            `;
+            return div;
+        };
+        legend.addTo(map);
     </script>
 </body>
 </html>

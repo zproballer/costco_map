@@ -1,0 +1,65 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Costco Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script>
+        const map = L.map('map').setView([34.0489, -111.0937], 7); // Centered on Arizona
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+        }).addTo(map);
+
+        // Load and display Costco locations
+        Papa.parse('costcos.csv', {
+            download: true,
+            header: true,
+            complete: function(results) {
+                results.data.forEach(row => {
+                    if (!row.lat || !row.lng) return;
+                    const marker = L.marker([parseFloat(row.lat), parseFloat(row.lng)]).addTo(map);
+                    marker.bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
+                });
+            }
+        });
+
+        // Load and display Rep locations with radius circles
+        fetch('reps.csv')
+            .then(response => response.ok ? response.text() : Promise.reject('No reps file found'))
+            .then(csv => {
+                Papa.parse(csv, {
+                    header: true,
+                    complete: function(results) {
+                        results.data.forEach(row => {
+                            if (!row.lat || !row.lng) return;
+                            const lat = parseFloat(row.lat);
+                            const lng = parseFloat(row.lng);
+                            const marker = L.circleMarker([lat, lng], { color: 'blue' }).addTo(map);
+                            marker.bindPopup(`<b>${row.name}</b><br>${row.address}`);
+                            L.circle([lat, lng], {
+                                color: 'blue',
+                                fillColor: '#blue',
+                                fillOpacity: 0.1,
+                                radius: 80467 // 50 miles in meters
+                            }).addTo(map);
+                        });
+                    }
+                });
+            })
+            .catch(() => {
+                console.log("No reps.csv found. Map will display only Costco locations.");
+            });
+    </script>
+</body>
+</html>

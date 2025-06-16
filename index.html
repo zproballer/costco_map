@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         #map { height: 100vh; }
+
         .leaflet-control.legend {
             background: white;
             padding: 10px;
@@ -20,27 +21,44 @@
             flex-wrap: wrap;
             align-items: flex-start;
         }
+
         .legend .legend-title {
             font-weight: bold;
             margin-bottom: 5px;
             width: 100%;
         }
+
         .legend-column {
             display: flex;
             flex-direction: column;
         }
+
         .legend-icon {
             vertical-align: middle;
             margin-right: 5px;
         }
+
         .tooltip-address {
             font-size: 11px;
             color: #444;
+        }
+
+        .legend-toggle {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: white;
+            padding: 5px 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            z-index: 1000;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div class="legend-toggle" onclick="toggleLegend()">Hide Legend</div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script>
@@ -98,6 +116,17 @@
                     <span class='tooltip-address'>${addressParts.line3}</span>`;
         }
 
+        function bindPermanentTooltip(marker, content) {
+            const tooltip = L.tooltip({
+                permanent: true,
+                direction: 'top',
+                offset: [0, -20],
+                interactive: false,
+                opacity: 0 // start hidden
+            }).setContent(content);
+            marker.bindTooltip(tooltip);
+        }
+
         Papa.parse('costcos.csv', {
             download: true,
             header: true,
@@ -111,12 +140,7 @@
 
                     const tooltipHTML = createTooltipContent(row);
                     const marker = L.marker([lat, lng], { icon }).bindPopup(tooltipHTML);
-                    marker.bindTooltip(tooltipHTML, {
-                        permanent: false,
-                        direction: "top",
-                        offset: [0, -20],
-                        interactive: false
-                    });
+                    bindPermanentTooltip(marker, tooltipHTML);
                     marker.addTo(costcoLayer);
                     costcoMarkers.push(marker);
                 });
@@ -136,12 +160,7 @@
 
                     const tooltipHTML = createTooltipContent(row);
                     const marker = L.marker([lat, lng], { icon }).bindPopup(tooltipHTML);
-                    marker.bindTooltip(tooltipHTML, {
-                        permanent: false,
-                        direction: "top",
-                        offset: [0, -20],
-                        interactive: false
-                    });
+                    bindPermanentTooltip(marker, tooltipHTML);
                     marker.addTo(samsLayer);
                     samsMarkers.push(marker);
                 });
@@ -178,6 +197,7 @@
 
         legend.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'leaflet-control legend');
+            div.id = "legendBox";
             div.innerHTML = `
                 <div class="legend-title">Legend</div>
                 <div class="legend-column">
@@ -200,11 +220,11 @@
         function toggleTooltips() {
             const show = document.getElementById('toggleTooltip').checked;
             [...costcoMarkers, ...samsMarkers].forEach(marker => {
-                marker.getTooltip().options.permanent = show;
-                if (show) {
-                    marker.openTooltip();
-                } else {
-                    marker.closeTooltip();
+                const tooltip = marker.getTooltip();
+                if (tooltip) {
+                    tooltip.options.opacity = show ? 1 : 0;
+                    tooltip.update();
+                    show ? marker.openTooltip() : marker.closeTooltip();
                 }
             });
         }
@@ -217,6 +237,18 @@
         function toggleSamsLayer() {
             const show = document.getElementById('toggleSams').checked;
             show ? samsLayer.addTo(map) : samsLayer.remove();
+        }
+
+        function toggleLegend() {
+            const legendBox = document.getElementById("legendBox");
+            const toggleBtn = document.querySelector(".legend-toggle");
+            if (legendBox.style.display === "none") {
+                legendBox.style.display = "flex";
+                toggleBtn.innerText = "Hide Legend";
+            } else {
+                legendBox.style.display = "none";
+                toggleBtn.innerText = "Show Legend";
+            }
         }
     </script>
 </body>

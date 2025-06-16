@@ -9,20 +9,30 @@
     <style>
         #map { height: 100vh; }
         .leaflet-control.legend {
-    background: white;
-    padding: 10px;
-    font-size: 14px;
-    line-height: 1.5;
-    box-shadow: 0 0 5px rgba(0,0,0,0.4);
-}
-.legend .legend-title {
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-.legend-icon {
-    vertical-align: middle;
-    margin-right: 5px;
-}
+            background: white;
+            padding: 10px;
+            font-size: 14px;
+            line-height: 1.5;
+            box-shadow: 0 0 5px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+        .legend .legend-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            width: 100%;
+        }
+        .legend-column {
+            display: flex;
+            flex-direction: column;
+        }
+        .legend-icon {
+            vertical-align: middle;
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
@@ -30,86 +40,92 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script>
-        const map = L.map('map').setView([34.0489, -111.0937], 7); // Centered on Arizona
-    const redIcon = new L.Icon({
-        iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32]
-    });
+        const map = L.map('map').setView([34.0489, -111.0937], 7);
 
-    const lightRedIcon = new L.Icon({
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red-light.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        shadowSize: [41, 41]
-    });
+        const redIcon = new L.Icon({
+            iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+        });
 
-    const yellowIcon = new L.Icon({
-        iconUrl: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32]
-    });
+        const lightRedIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red-light.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            shadowSize: [41, 41]
+        });
 
-    const blueIcon = new L.Icon({
-        iconUrl: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32]
-    });
+        const yellowIcon = new L.Icon({
+            iconUrl: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+        });
 
-    const lightBlueIcon = new L.Icon({
-        iconUrl: 'https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32]
-    });
+        const blueIcon = new L.Icon({
+            iconUrl: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+        });
+
+        const lightBlueIcon = new L.Icon({
+            iconUrl: 'https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+        });
+
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 18,
         }).addTo(map);
 
-// Load and display Costco locations
-Papa.parse('costcos.csv', {
-    download: true,
-    header: true,
-    complete: function(results) {
-        results.data.forEach(row => {
-            if (!row.lat || !row.lng) return;
-            const lat = parseFloat(row.lat);
-            const lng = parseFloat(row.lng);
-            const status = row.status ? row.status.trim().toLowerCase() : "inactive";
+        const costcoMarkers = [];
+        const samsMarkers = [];
 
-            const marker = L.marker([lat, lng], {
-                icon: status === "active" ? redIcon : yellowIcon
-            }).addTo(map);
+        Papa.parse('costcos.csv', {
+            download: true,
+            header: true,
+            complete: function(results) {
+                results.data.forEach(row => {
+                    if (!row.lat || !row.lng) return;
+                    const lat = parseFloat(row.lat);
+                    const lng = parseFloat(row.lng);
+                    const status = row.status ? row.status.trim().toLowerCase() : "inactive";
 
-            marker.bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
+                    const marker = L.marker([lat, lng], {
+                        icon: status === "active" ? redIcon : lightRedIcon
+                    }).addTo(map);
+
+                    marker.bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
+                    costcoMarkers.push(marker);
+                });
+            }
         });
-    }
-});
-        
-Papa.parse('sams.csv', {
-    download: true,
-    header: true,
-    complete: function(results) {
-        results.data.forEach(row => {
-            if (!row.lat || !row.lng) return;
-            const lat = parseFloat(row.lat);
-            const lng = parseFloat(row.lng);
-            const status = row.status ? row.status.trim().toLowerCase() : "inactive";
 
-            const marker = L.marker([lat, lng], {
-                icon: status === "active" ? blueIcon : lightBlueIcon
-            }).addTo(map);
+        Papa.parse('sams.csv', {
+            download: true,
+            header: true,
+            complete: function(results) {
+                results.data.forEach(row => {
+                    if (!row.lat || !row.lng) return;
+                    const lat = parseFloat(row.lat);
+                    const lng = parseFloat(row.lng);
+                    const status = row.status ? row.status.trim().toLowerCase() : "inactive";
 
-            marker.bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
+                    const marker = L.marker([lat, lng], {
+                        icon: status === "active" ? blueIcon : lightBlueIcon
+                    }).addTo(map);
+
+                    marker.bindPopup(`<b>${row.name}</b><br>${row.address}<br>Store #${row.store_number}`);
+                    samsMarkers.push(marker);
+                });
+            }
         });
-    }
-});
-        // Load and display Rep locations with radius circles
+
         fetch('reps.csv')
             .then(response => response.ok ? response.text() : Promise.reject('No reps file found'))
             .then(csv => {
@@ -126,28 +142,45 @@ Papa.parse('sams.csv', {
                                 color: 'blue',
                                 fillColor: '#blue',
                                 fillOpacity: 0.1,
-                                radius: 80467 // 50 miles in meters
+                                radius: 80467
                             }).addTo(map);
                         });
                     }
                 });
             })
             .catch(() => {
-                console.log("No reps.csv found. Map will display only Costco locations.");
+                console.log("No reps.csv found. Map will display only Costco and Sam's Club locations.");
             });
+
         const legend = L.control({ position: 'bottomright' });
 
-legend.onAdd = function (map) {
-    const div = L.DomUtil.create('div', 'leaflet-control legend');
-    div.innerHTML += `<div class="legend-title">Legend</div>`;
-    div.innerHTML += `<div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/red-dot.png"> Active Costco</div>`;
-    div.innerHTML += `<div><img class="legend-icon" src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red-light.png"> Inactive Costco</div>`;
-    div.innerHTML += `<div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png"> Active Sam's Club</div>`;
-    div.innerHTML += `<div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png"> Inactive Sam's Club</div>`;
-    return div;
-};
+        legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'leaflet-control legend');
+            div.innerHTML = `
+                <div class="legend-title">Legend</div>
+                <div class="legend-column">
+                    <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/red-dot.png"> Active Costco</div>
+                    <div><img class="legend-icon" src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red-light.png"> Inactive Costco</div>
+                    <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png"> Active Sam's Club</div>
+                    <div><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png"> Inactive Sam's Club</div>
+                </div>
+                <div class="legend-column">
+                    <label>
+                        <input type="checkbox" id="togglePopups" onchange="toggleAllPopups()" />
+                        Show All Info
+                    </label>
+                </div>
+            `;
+            return div;
+        };
 
-legend.addTo(map);
+        legend.addTo(map);
+
+        function toggleAllPopups() {
+            const show = document.getElementById('togglePopups').checked;
+            costcoMarkers.forEach(marker => show ? marker.openPopup() : marker.closePopup());
+            samsMarkers.forEach(marker => show ? marker.openPopup() : marker.closePopup());
+        }
     </script>
 </body>
 </html>

@@ -116,15 +116,15 @@
                     <span class='tooltip-address'>${addressParts.line3}</span>`;
         }
 
-        function bindPermanentTooltip(marker, content) {
-            const tooltip = L.tooltip({
-                permanent: true,
-                direction: 'top',
-                offset: [0, -20],
-                interactive: false,
-                opacity: 0 // start hidden
-            }).setContent(content);
-            marker.bindTooltip(tooltip);
+        function createMarker(row, icon, collection, layer) {
+            const lat = parseFloat(row.lat);
+            const lng = parseFloat(row.lng);
+            const tooltipHTML = createTooltipContent(row);
+
+            const marker = L.marker([lat, lng], { icon }).bindPopup(tooltipHTML);
+            marker.tooltipHTML = tooltipHTML; // store content
+            collection.push(marker);
+            marker.addTo(layer);
         }
 
         Papa.parse('costcos.csv', {
@@ -133,16 +133,9 @@
             complete: function(results) {
                 results.data.forEach(row => {
                     if (!row.lat || !row.lng) return;
-                    const lat = parseFloat(row.lat);
-                    const lng = parseFloat(row.lng);
                     const status = row.status ? row.status.trim().toLowerCase() : "inactive";
                     const icon = status === "active" ? redIcon : yellowIcon;
-
-                    const tooltipHTML = createTooltipContent(row);
-                    const marker = L.marker([lat, lng], { icon }).bindPopup(tooltipHTML);
-                    bindPermanentTooltip(marker, tooltipHTML);
-                    marker.addTo(costcoLayer);
-                    costcoMarkers.push(marker);
+                    createMarker(row, icon, costcoMarkers, costcoLayer);
                 });
             }
         });
@@ -153,16 +146,9 @@
             complete: function(results) {
                 results.data.forEach(row => {
                     if (!row.lat || !row.lng) return;
-                    const lat = parseFloat(row.lat);
-                    const lng = parseFloat(row.lng);
                     const status = row.status ? row.status.trim().toLowerCase() : "inactive";
                     const icon = status === "active" ? blueIcon : lightBlueIcon;
-
-                    const tooltipHTML = createTooltipContent(row);
-                    const marker = L.marker([lat, lng], { icon }).bindPopup(tooltipHTML);
-                    bindPermanentTooltip(marker, tooltipHTML);
-                    marker.addTo(samsLayer);
-                    samsMarkers.push(marker);
+                    createMarker(row, icon, samsMarkers, samsLayer);
                 });
             }
         });
@@ -219,12 +205,16 @@
 
         function toggleTooltips() {
             const show = document.getElementById('toggleTooltip').checked;
-            [...costcoMarkers, ...samsMarkers].forEach(marker => {
-                const tooltip = marker.getTooltip();
-                if (tooltip) {
-                    tooltip.options.opacity = show ? 1 : 0;
-                    tooltip.update();
-                    show ? marker.openTooltip() : marker.closeTooltip();
+            const allMarkers = [...costcoMarkers, ...samsMarkers];
+            allMarkers.forEach(marker => {
+                if (marker.getTooltip()) marker.unbindTooltip();
+                if (show) {
+                    marker.bindTooltip(marker.tooltipHTML, {
+                        permanent: true,
+                        direction: "top",
+                        offset: [0, -20],
+                        interactive: false
+                    }).openTooltip();
                 }
             });
         }

@@ -93,7 +93,7 @@
 
         function createTooltipContent(row) {
             const addressParts = formatAddress(row.address);
-            return `<b>(#${row.store_number}) ${row.name}</b><br>
+            return `<b>(${row.store_number}) ${row.name}</b><br>
                     <span class='tooltip-address'>${addressParts.line2}</span><br>
                     <span class='tooltip-address'>${addressParts.line3}</span>`;
         }
